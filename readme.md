@@ -1,4 +1,7 @@
-# Скрипт для пакетного перевода текста RU-EN в CSV-файлах с помощью AI/нейросети
+# Скрипт для пакетного перевода текста RU→EN в CSV-файлах с помощью AI/нейросети  
+*(English description below)*  
+
+🇷🇺 Этот README сначала на русском, ниже — английская версия.  
 
 Этот скрипт предназначен для автоматического перевода русскоязычного текста на английский язык внутри больших CSV-файлов. Он оптимизирован для работы с файлами объемом в сотни мегабайт и миллионы строк, эффективно используя ресурсы графического процессора (GPU) для ускорения процесса.
 
@@ -16,7 +19,7 @@
 Для работы скрипта необходим Python 3.x и следующие библиотеки. Зависимости в requirements.txt. Установить их можно командой:
 
 ```bash
-pip install pandas torch transformers sentencepiece sacremoses tqdm
+pip install -r requirements.txt
 ```
 **Важно:** Для работы на GPU у вас должна быть установлена видеокарта NVIDIA и соответствующая версия CUDA, совместимая с вашей версией PyTorch. Для поддержки CUDA нужно установить torch со следующими параметрами
 ```bash
@@ -83,5 +86,105 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
    - Обработанный `DataFrame` записывается в выходной файл с помощью метода `.to_csv()`. Этот метод оптимизирован для работы с большими данными и не вызывает ошибок нехватки памяти, так как записывает данные на диск порциями, а не создает один гигантский объект в памяти.
    - Файл открывается в режиме дозаписи (`mode='a'`), поэтому каждый новый обработанный чанк добавляется в конец файла.
    - Прогресс-бар `tqdm` обновляется, и цикл повторяется для следующего чанка, пока весь исходный файл не будет прочитан.
+
+---
+
+# Script for Batch RU→EN Translation in CSV Files Using AI/Neural Networks  
+*(Русское описание выше)*  
+
+🇬🇧 This README is first in Russian, scroll up for details.  
+
+Here’s a clear English translation of your text, adapted to look natural in a GitHub README:
+
+---
+
+# Script for Batch RU→EN Translation in CSV Files Using AI/Neural Networks
+
+This script is designed to automatically translate Russian text into English inside large CSV files. It is optimized to handle files hundreds of megabytes in size and millions of rows, efficiently utilizing GPU resources to speed up the process.
+
+## Key Features
+
+* **Large file processing:** Reads the input file in chunks, allowing translation of files larger than available system memory.
+* **GPU acceleration:** Uses PyTorch and Hugging Face Transformers to run computations on an NVIDIA GPU (CUDA), greatly accelerating translation.
+* **Batching:** Collects unique phrases and translates them in large batches for maximum GPU efficiency.
+* **Smart text extraction:** Uses regular expressions to detect and translate only Russian text fragments, leaving code, markup, and other symbols intact.
+* **Robust output writing:** Optimized CSV writing methods prevent `MemoryError` during the final write stage.
+* **Configurable:** Core parameters like chunk size and batch size are adjustable in a dedicated configuration block.
+
+## Requirements
+
+Python 3.x is required, along with the dependencies listed in `requirements.txt`. Install them with:
+
+```bash
+pip install -r requirements.txt
+```
+
+**Important:** To use GPU acceleration, you need an NVIDIA GPU and a compatible CUDA version for PyTorch. For CUDA support, install Torch with:
+
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
+## Configuration
+
+All key parameters are defined at the top of the script:
+
+* `MODEL_NAME`: Hugging Face model name (default: `Helsinki-NLP/opus-mt-ru-en`).
+* `INPUT_FILE`: Input CSV file.
+* `OUTPUT_FILE`: Output CSV file.
+* `INPUT_ENCODING` / `OUTPUT_ENCODING`: File encodings.
+* `CHUNK_SIZE`: **Number of rows** read from the input file per iteration. Balances CPU and RAM usage.
+* `BATCH_SIZE`: **Number of phrases** processed per GPU batch. Balances GPU VRAM usage.
+* `LOG_FILE` / `LOG_LEVEL`: Logging configuration.
+* `USE_GPU`: `True` to enable GPU, `False` to force CPU.
+
+## Usage
+
+1. Adjust the configuration block in the script.
+2. Place your source `input.csv` in the same directory.
+3. Run the script:
+
+   ```bash
+   python run_translator.py
+   ```
+4. A progress bar will track progress. The translated output will be saved to `OUTPUT_FILE`.
+
+## How It Works
+
+**1. Initialization and model loading (`main`, `load_model`)**
+
+* Sets up logging.
+* Detects GPU availability.
+* Loads the translation model (`Helsinki-NLP/opus-mt-ru-en`) and tokenizer with Hugging Face `transformers`.
+* Creates a `pipeline` object to handle tokenization, translation, and post-processing.
+
+**2. Reading the file in chunks (`main`)**
+
+* Iteratively reads the CSV file in chunks (`CHUNK_SIZE`) using `itertools.islice`.
+* Each chunk is converted into a `pandas.DataFrame` for processing.
+
+**3. Processing a chunk (`process_chunk`)**
+
+* **Step 3a: Extracting and deduplicating phrases**
+
+  * Uses regex to find Cyrillic fragments in each row.
+  * Stores unique phrases in a Python `set` to avoid duplicate translations.
+* **Step 3b: Batch translation on GPU**
+
+  * Passes unique phrases to the `translator` pipeline.
+  * Processes them in batches (`BATCH_SIZE`) on GPU.
+  * Creates a mapping dictionary `{original: translation}`.
+* **Step 3c: Safe text replacement**
+
+  * Uses regex substitution with a callback to replace only Russian fragments while preserving surrounding code/markup.
+* **Step 3d: Returning the result**
+
+  * Returns a translated `DataFrame`.
+
+**4. Writing results (`main`)**
+
+* Saves translated data to CSV using `.to_csv()` in append mode.
+* Writes data in streaming mode to avoid memory issues.
+* Updates progress bar until the entire input file is processed.
 
 ---
